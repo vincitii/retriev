@@ -162,6 +162,8 @@ button.secondary{ background: transparent; border:1px solid var(--action); color
 .flashcard-answer{ opacity: 0; max-height: 0; transition: opacity 0.24s ease, max-height 0.24s ease; }
 .flashcard.flipped .flashcard-answer{ opacity: 1; max-height: 500px; }
 .flashcard.flipped .flashcard-front::after{ content: 'Tap again to hide answer'; display:block; margin-top:12px; color: var(--muted); font-size:0.95rem; }
+.loading-spinner{ width: 42px; height: 42px; margin: 20px auto 12px auto; border: 4px solid rgba(255,255,255,0.16); border-top-color: var(--accent); border-radius: 50%; animation: spinner 0.85s linear infinite; }
+@keyframes spinner{ to{ transform: rotate(360deg); }}
 .tag-pill{ display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; background: rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); font-size:0.85rem; }
 .quiz-card{ background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:20px; padding:20px; margin-bottom:18px; }
 .exam-item{ display:flex; justify-content:space-between; gap:12px; align-items:start; padding:16px; background: var(--card); border-radius:18px; border:1px solid rgba(255,255,255,0.12); }

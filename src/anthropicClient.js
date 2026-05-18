@@ -1,32 +1,46 @@
-const CLAUDE_API_URL = '/api/anthropic';
+const PROXY_URL = 'http://localhost:3001/api/chat';
 
 export async function claudeComplete(prompt, maxTokens = 800, systemPrompt = null) {
-	const modelPrompt = systemPrompt
-		? `System: ${systemPrompt}\n\nHuman: ${prompt}\n\nAssistant:`
-		: `Human: ${prompt}\n\nAssistant:`;
+  const body = {
+    model: 'claude-haiku-4-5-20251001',
+    system: systemPrompt || 'You are a helpful assistant.',
+    messages: [
+      { role: 'user', content: prompt },
+    ],
+    max_tokens: 8000,
+  };
 
-	const body = {
-		model: 'claude-sonnet-4-20250514',
-		prompt: modelPrompt,
-		max_tokens_to_sample: maxTokens,
-		temperature: 0.25,
-		top_p: 1,
-		stop_sequences: ['Human:'],
-	};
+  console.log('Claude request body:', JSON.stringify(body, null, 2));
 
-	const response = await fetch(CLAUDE_API_URL, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-		},
-		body: JSON.stringify(body),
-	});
+  const response = await fetch(PROXY_URL, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
 
-	if (!response.ok) {
-		const text = await response.text();
-		throw new Error(`Anthropic proxy error: ${response.status} ${response.statusText} ${text}`);
-	}
+  console.log('Claude proxy response status:', response.status, response.statusText);
+  console.log('Claude proxy response headers:', Array.from(response.headers.entries()));
 
-	const data = await response.json();
-	return data.completion || '';
+  let responseText = await response.text();
+  console.log('Claude proxy raw response text:', responseText);
+
+  if (!response.ok) {
+    throw new Error(`Anthropic proxy error: ${response.status} ${response.statusText} ${responseText}`);
+  }
+
+  responseText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+  let data;
+  try {
+    data = JSON.parse(responseText);
+  } catch (parseError) {
+    console.error('Failed to parse Claude API response JSON:', parseError, responseText);
+    throw parseError;
+  }
+
+  const resultText = data?.content?.[0]?.text || '';
+  console.log('Claude parsed text output length:', resultText.length, 'text preview:', resultText.substring(0, 200));
+  return resultText;
 }

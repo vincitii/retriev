@@ -8,8 +8,17 @@ export function loadAppState() {
   try {
     const raw = window.localStorage.getItem('paStudyAppState');
     if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed;
+    const parsed = JSON.parse(raw) || {};
+    return {
+      theme: parsed.theme || 'dark',
+      courses: Array.isArray(parsed.courses) ? parsed.courses : [],
+      exams: Array.isArray(parsed.exams) ? parsed.exams : [],
+      schedule: Array.isArray(parsed.schedule) ? parsed.schedule : [],
+      history: Array.isArray(parsed.history) ? parsed.history : [],
+      availability: parsed.availability || { wake: '07:00', sleep: '23:00', blocked: [] },
+      uploadDraftNotes: Array.isArray(parsed.uploadDraftNotes) ? parsed.uploadDraftNotes : [],
+      ...parsed,
+    };
   } catch (error) {
     console.warn('Unable to load app state:', error);
     return null;
@@ -158,11 +167,13 @@ export function buildStudySchedule(exams, courses, availability) {
 
     const freeSpans = subtractIntervals(available, blocked);
 
-    // create candidate start times (every 30 minutes) inside free spans keeping 90-minute fit
+    // create candidate start times inside free spans with a 30-minute gap between sessions
     const candidateStarts = [];
     const sessionLength = 90;
+    const sessionGap = 30;
+    const step = sessionLength + sessionGap;
     for (const span of freeSpans) {
-      for (let t = span.start; t + sessionLength <= span.end; t += sessionLength) {
+      for (let t = span.start; t + sessionLength <= span.end; t += step) {
         candidateStarts.push(t);
       }
     }

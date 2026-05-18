@@ -81,15 +81,15 @@ function App() {
 
   const todayKey = getTodayKey();
 
-  const SYSTEM_PROMPT = `You are an expert medical educator creating Anki-style flashcards for a PA student. From these notes extract only high-yield testable content. For each flashcard the front must be a specific question or term and the back must be a concise answer of 1-3 sentences. Prioritize: anatomical structures and functions, mechanisms, key definitions, clinical facts, and learning objectives. Ignore: professor contact info, course logistics, dates, and anything not testable. Scale the number of cards to content length — one lecture = 15-25 cards, full chapter = 40-60 cards. Return ONLY a valid JSON array in this format: [{"front": "question", "back": "answer"}]`;
+  const SYSTEM_PROMPT = `You are an expert medical educator creating Anki-style flashcards for a PA student. Extract only high-yield testable content. Front must be a specific question or term. Back must be a concise answer of 1-3 sentences. Prioritize anatomical structures, mechanisms, definitions, and clinical facts. Ignore professor info and logistics. Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
 
   const dueCourses = useMemo(
-    () => state.courses.filter((course) => course.nextDue && course.nextDue <= todayKey),
+    () => (state.courses || []).filter((course) => course.nextDue && course.nextDue <= todayKey),
     [state.courses, todayKey]
   );
 
   const coursesDueSorted = useMemo(
-    () => state.courses.slice().sort((a, b) => (a.nextDue || '').localeCompare(b.nextDue || '') || a.title.localeCompare(b.title)),
+    () => (state.courses || []).slice().sort((a, b) => (a.nextDue || '').localeCompare(b.nextDue || '') || a.title.localeCompare(b.title)),
     [state.courses]
   );
 
@@ -112,7 +112,7 @@ function App() {
   }, [state.exams, state.courses]);
 
   const completedToday = useMemo(
-    () => state.history.filter((item) => item.date.slice(0, 10) === todayKey).length,
+    () => state.history.filter((item) => item.date.slice(0, 10) === todayKey && item.type === 'session').length,
     [state.history, todayKey]
   );
 
@@ -150,7 +150,7 @@ function App() {
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
     setLoading(true);
-    setUploadMessage('Importing files...');
+    setUploadMessage('Extracting text from uploaded notes...');
 
     try {
       const parsedNotes = [];
@@ -174,6 +174,7 @@ function App() {
           name: file.name,
           type: file.type || 'text/plain',
           text,
+          extractedText: text,
           importedAt: new Date().toISOString(),
         });
       }
@@ -298,6 +299,8 @@ function App() {
       id: `card-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       front,
       back,
+      term: front,
+      definition: back,
       interval: 1,
       easeFactor: 2.5,
       repetitions: 0,
@@ -340,19 +343,44 @@ function App() {
 
   function getCourseNotesText(course) {
     if (!course.notes?.length) return course.title || '';
-    return course.notes.map((note) => `${note.name}\n${note.text}`).join('\n\n');
+    return course.notes
+      .map((note) => `${note.name}\n${note.extractedText ?? note.text ?? ''}`)
+      .join('\n\n');
   }
 
   async function prepareCourseFlashcards(course) {
     const notesText = getCourseNotesText(course);
+    if (!notesText.trim()) {
+      throw new Error('Could not read PDF content — try re-uploading your notes.');
+    }
+
     const desiredCount = getDesiredCardCount(notesText);
     const humanPrompt = `Notes:\n${notesText}\n\nCreate approximately ${desiredCount} flashcards.`;
 
+    console.log('Sending extracted text to Claude:', notesText.slice(0, 500));
+
     try {
       const raw = await claudeComplete(humanPrompt, 1200, SYSTEM_PROMPT);
-      const parsed = safeParseJson(raw);
-      if (Array.isArray(parsed) && parsed.length) {
-        const cards = parsed.slice(0, Math.max(desiredCount, parsed.length)).map((item, index) => {
+      console.log('Raw Claude response for flashcards:', raw);
+
+      const data = typeof raw === 'string' ? { content: [{ text: raw }] } : raw;
+      const rawText = data.content[0].text;
+      console.log('Raw text first 100 chars:', rawText.substring(0, 100));
+      let cleanText = rawText;
+      if (cleanText.includes('```')) {
+        cleanText = cleanText.replace(/```json/g, '').replace(/```/g, '');
+      }
+      cleanText = cleanText.trim();
+      const lastBracket = cleanText.lastIndexOf(']');
+      if (lastBracket > -1) {
+        cleanText = cleanText.substring(0, lastBracket + 1);
+      }
+      console.log('Clean text first 100 chars:', cleanText.substring(0, 100));
+      const flashcards = JSON.parse(cleanText);
+      console.log('Parsed flashcards count:', flashcards.length);
+
+      if (Array.isArray(flashcards) && flashcards.length) {
+        const cards = flashcards.slice(0, Math.max(desiredCount, flashcards.length)).map((item, index) => {
           const front = item.front || item.question || item.term || `Card ${index + 1}`;
           const back = item.back || item.answer || item.definition || '';
           return buildCard(front, back);
@@ -419,7 +447,13 @@ function App() {
 
     let cards = getDueFlashcards(course);
     if (!cards.length) {
-      cards = await prepareCourseFlashcards(course);
+      setSessionState({ phase: 'loading', courseId, queue: [], flipped: false, completed: 0, total: 0, quizQuestions: [], answers: {}, score: null, summary: '', message: 'Generating flashcards from your notes...' });
+      try {
+        cards = await prepareCourseFlashcards(course);
+      } catch (error) {
+        setSessionState({ phase: 'summary', courseId, queue: [], flipped: false, completed: 0, total: 0, quizQuestions: [], answers: {}, score: null, summary: error.message || 'Failed to generate flashcards.' });
+        return;
+      }
     }
 
     setSessionState({ phase: 'flashcards', courseId, queue: cards, flipped: false, completed: 0, total: cards.length, quizQuestions: [], answers: {}, score: null, summary: '', message: '' });
@@ -463,10 +497,6 @@ function App() {
       };
       updateAppState({
         courses: state.courses.map((item) => (item.id === course.id ? updatedCourse : item)),
-        history: [
-          { id: `history-${Date.now()}`, courseId: course.id, title: course.title, rating, date: new Date().toISOString() },
-          ...state.history,
-        ],
       });
     }
 
@@ -512,7 +542,14 @@ function App() {
       return { ...item, given: userAnswer, isCorrect: matched };
     });
     const score = Math.round((correct / Math.max(1, scored.length)) * 100);
-    setSessionState((prev) => ({ ...prev, phase: 'summary', score, quizQuestions: scored, summary: `You scored ${correct} out of ${scored.length}. Review any missed concepts in your next session.` }));
+    setSessionState((prev) => ({ ...prev, phase: 'summary', score, quizQuestions: scored, summary: `You scored ${correct} out of ${scored.length}. Review any missed concepts in your next session.`, completedSession: true }));
+    const course = state.courses.find((item) => item.id === sessionState.courseId);
+    updateAppState({
+      history: [
+        { id: `history-${Date.now()}`, courseId: sessionState.courseId, title: course?.title || '', type: 'session', date: new Date().toISOString() },
+        ...state.history,
+      ],
+    });
   }
 
   function endSession() {
@@ -803,6 +840,7 @@ function App() {
 
         {sessionState?.phase === 'loading' && (
           <div className="panel">
+            <div className="loading-spinner" />
             <p>{sessionState.message}</p>
           </div>
         )}
