@@ -1,5 +1,6 @@
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.entry';
+import JSZip from 'jszip';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
@@ -47,6 +48,33 @@ export async function extractTextFromPdf(file) {
     const textContent = await pageObj.getTextContent();
     const pageText = textContent.items.map((item) => item.str).join(' ');
     pageTexts.push(pageText);
+  }
+
+  return pageTexts.join('\n\n');
+}
+
+export async function extractTextFromPptx(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  const zip = await JSZip.loadAsync(arrayBuffer);
+  const slideFiles = Object.keys(zip.files).filter((p) => p.match(/^ppt\/slides\/slide\d+\.xml$/));
+  slideFiles.sort((a, b) => {
+    const na = parseInt(a.match(/slide(\d+)\.xml$/)[1], 10);
+    const nb = parseInt(b.match(/slide(\d+)\.xml$/)[1], 10);
+    return na - nb;
+  });
+
+  const pageTexts = [];
+  for (const slidePath of slideFiles) {
+    const content = await zip.files[slidePath].async('string');
+    // extract text nodes <a:t>text</a:t>
+    const parts = [];
+    const re = /<a:t[^>]*>(.*?)<\/a:t>/gms;
+    let m;
+    while ((m = re.exec(content)) !== null) {
+      parts.push(m[1].replace(/\s+/g, ' ').trim());
+    }
+    const slideText = parts.join(' ');
+    if (slideText) pageTexts.push(slideText);
   }
 
   return pageTexts.join('\n\n');
@@ -132,8 +160,9 @@ export function buildStudySchedule(exams, courses, availability) {
 
     // create candidate start times (every 30 minutes) inside free spans keeping 90-minute fit
     const candidateStarts = [];
+    const sessionLength = 90;
     for (const span of freeSpans) {
-      for (let t = span.start; t + 90 <= span.end; t += 30) {
+      for (let t = span.start; t + sessionLength <= span.end; t += sessionLength) {
         candidateStarts.push(t);
       }
     }
@@ -240,15 +269,32 @@ export function buildCourseSummary(course) {
 
 export function safeParseJson(text) {
   if (!text) return null;
-  const jsonStart = text.indexOf('{');
-  const jsonEnd = text.lastIndexOf('}');
-  if (jsonStart === -1 || jsonEnd === -1) return null;
-  const candidate = text.slice(jsonStart, jsonEnd + 1);
-  try {
-    return JSON.parse(candidate);
-  } catch (error) {
-    return null;
+
+  const trimmed = text.trim();
+  const arrayStart = trimmed.indexOf('[');
+  const arrayEnd = trimmed.lastIndexOf(']');
+  const objectStart = trimmed.indexOf('{');
+  const objectEnd = trimmed.lastIndexOf('}');
+
+  if (arrayStart !== -1 && arrayEnd !== -1 && arrayStart < arrayEnd) {
+    const candidate = trimmed.slice(arrayStart, arrayEnd + 1);
+    try {
+      return JSON.parse(candidate);
+    } catch (error) {
+      // continue to object parse fallback
+    }
   }
+
+  if (objectStart !== -1 && objectEnd !== -1 && objectStart < objectEnd) {
+    const candidate = trimmed.slice(objectStart, objectEnd + 1);
+    try {
+      return JSON.parse(candidate);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  return null;
 }
 
 export function parseSimpleCourses(text) {

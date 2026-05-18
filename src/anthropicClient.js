@@ -1,9 +1,13 @@
 const CLAUDE_API_URL = '/api/anthropic';
 
-export async function claudeComplete(prompt, maxTokens = 800) {
+export async function claudeComplete(prompt, maxTokens = 800, systemPrompt = null) {
+	const modelPrompt = systemPrompt
+		? `System: ${systemPrompt}\n\nHuman: ${prompt}\n\nAssistant:`
+		: `Human: ${prompt}\n\nAssistant:`;
+
 	const body = {
 		model: 'claude-sonnet-4-20250514',
-		prompt: `Human: ${prompt}\n\nAssistant:`,
+		prompt: modelPrompt,
 		max_tokens_to_sample: maxTokens,
 		temperature: 0.25,
 		top_p: 1,
