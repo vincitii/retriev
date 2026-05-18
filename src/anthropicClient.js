@@ -1,4 +1,4 @@
-const PROXY_URL = 'http://localhost:3001/api/chat';
+const PROXY_URL = '/api/chat';
 
 export async function claudeComplete(prompt, maxTokens = 800, systemPrompt = null) {
   const body = {
