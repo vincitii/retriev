@@ -772,7 +772,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
     if (studyTimer.remaining === switchAt && studyTimer.segmentIndex + 1 < studyTimer.segments.length) {
       setStudyTimer(prev => ({ ...prev, showSwitch: true }));
     }
-  }, [studyTimer.remaining]);
+  }, [studyTimer.remaining, studyTimer.active, studyTimer.segmentIndex, studyTimer.segmentMinutes, studyTimer.segments.length]);
 
   function endSession() {
     setView('home');
