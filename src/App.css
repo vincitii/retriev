@@ -181,7 +181,7 @@ main { display:block; }
 .report-card.report-sub{ padding:14px; border-left-width:3px; }
 
 /* Compact panel for Select a course to review */
-.panel.panel-compact{ padding:16px; font-size:0.95rem; max-height:360px; overflow:auto; }
+.panel.panel-compact{ padding:16px; font-size:0.95rem; }
 .panel.panel-compact .frame{ padding:10px; }
 
 .schedule-card{ display:grid; gap:10px; }
