@@ -930,16 +930,28 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
           <h2>Philosophy</h2>
           <div className="philosophy">
             <h3>Why RETRIEV works</h3>
-            <p>Speedy retrieval, spaced repetition, and exam-style quizzes help move information from short-term memory into lasting understanding.</p>
-            <h3>How to use this app</h3>
-            <p>Start on the home page: add a course, upload notes, and create an exam plan. Then open a study session and use the flashcards and quiz flow.</p>
-            <h3>Study flow</h3>
+            <p>Retriev is built on the learning science behind <em>Learning That Lasts</em> by Longest, Mehta, and Bransford — a framework used in medical education to move information from short-term working memory into durable long-term retention. The core techniques are retrieval practice, spaced repetition, interleaving, and elaborative interrogation. Every feature in this app is built around one of those principles.</p>
+
+            <h3>Spaced repetition</h3>
+            <p>Every flashcard is scheduled using a modified SM-2 algorithm — the same system behind Anki. When you rate a card Easy, Medium, Hard, or Again, the app calculates exactly when you need to see it next to reinforce the memory just before you'd forget it. Intervals are automatically capped based on your nearest exam date so cards never get pushed too far out.</p>
+
+            <h3>Active retrieval</h3>
+            <p>Retriev never lets you passively read. You must flip the card and attempt recall before rating yourself. This forces your brain to retrieve the information, which strengthens the memory trace far more than re-reading. The AI-generated quiz at the end of each session applies the same principle with exam-style questions drawn directly from your notes.</p>
+
+            <h3>How to use Retriev efficiently</h3>
             <ol>
-              <li>Add a course and attach your notes.</li>
-              <li>Review the study queue and open a session.</li>
-              <li>Flip cards, rate yourself honestly, and finish with a quiz.</li>
-              <li>Schedule your next review and revisit weak concepts.</li>
+              <li><strong>Add a course</strong> — give it a name, upload your lecture PDFs or slides, and set your exam date.</li>
+              <li><strong>Generate your schedule</strong> — click "Generate study schedule" in Exam plans to build a daily block split across all your active exams.</li>
+              <li><strong>Start a study session</strong> — click Study on any course card. Flashcards are generated automatically from your notes using Claude AI.</li>
+              <li><strong>Rate honestly</strong> — Again means you didn't know it, Hard means you struggled, Medium means you got it with effort, Easy means instant recall. Honest ratings make the algorithm work.</li>
+              <li><strong>Finish the quiz</strong> — after flashcards you get an AI-generated quiz. Review your answers and explanations before returning home.</li>
+              <li><strong>Use the calendar timer</strong> — click today's study block on the weekly calendar to start a timed session. The timer splits your block across all active exams and tells you when to switch.</li>
+              <li><strong>Archive exams when done</strong> — once an exam passes, archive it in Exam plans so it clears from your queue and calendar.</li>
+              <li><strong>Add notes anytime</strong> — click any exam in Exam notes to upload additional PDFs. New notes are included next time you generate flashcards.</li>
             </ol>
+
+            <h3>Weak spot tracker</h3>
+            <p>Any course where you've rated cards Hard or Again multiple times shows up in the Weak spot tracker on your dashboard. Prioritize these as your exam approaches.</p>
           </div>
         </section>
       </>
