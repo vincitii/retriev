@@ -524,7 +524,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
     return fallbackCards;
   }
 
-  const createQuizForCourse = useCallback(async (course) => {
+  const createQuizForCourse = useCallback(async (course, weakCards = []) => {
     const getCourseNotesTextForQuiz = (courseItem) => {
       const exam = state.exams.find((e) => e.courseId === courseItem.id);
       const notes = exam?.notes?.length ? exam.notes : courseItem.notes || [];
@@ -535,8 +535,17 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
     };
 
     const notesText = getCourseNotesTextForQuiz(course);
-    const quizCount = Math.min(10, Math.max(3, Math.floor((course.flashcards?.length || 15) / 5)));
-    const prompt = `You are a PA school study coach. Based on this course title and notes, create ${quizCount} exam-style quiz questions. Return valid JSON as an array with objects: { question, type, choices, answer, explanation }. Use "multiple-choice" for half the questions and "short-answer" for the other half. Do not include extra text.\n\nCourse title: ${course.title}\nNotes:\n${notesText}`;
+    const quizCount = Math.min(10, Math.max(3, weakCards.length ? weakCards.length : Math.floor((course.flashcards?.length || 15) / 5)));
+
+    const weakCardText = weakCards.length
+      ? weakCards.map(c => `Q: ${c.front}\nA: ${c.back}`).join('\n\n')
+      : notesText;
+
+    const focusNote = weakCards.length
+      ? `Focus specifically on these concepts the student struggled with:`
+      : `Based on this course title and notes, create exam-style questions:`;
+
+    const prompt = `You are a PA school study coach. ${focusNote}\n\n${weakCardText}\n\nCreate ${quizCount} exam-style quiz questions. Return valid JSON as an array with objects: { question, type, choices, answer, explanation }. Use "multiple-choice" for half the questions and "short-answer" for the other half. Do not include extra text.`;
     try {
       const raw = await claudeComplete(prompt, 900);
       const parsed = safeParseJson(raw);
@@ -588,7 +597,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
       }
     }
 
-    setSessionState({ phase: 'flashcards', courseId, queue: cards, flipped: false, completed: 0, total: cards.length, quizQuestions: [], answers: {}, score: null, summary: '', message: '' });
+    setSessionState({ phase: 'flashcards', courseId, queue: cards, flipped: false, completed: 0, total: cards.length, quizQuestions: [], answers: {}, score: null, summary: '', message: '', weakCards: [] });
   }
 
   useEffect(() => {
@@ -599,7 +608,8 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
         setSessionState((prev) => ({ ...prev, phase: 'summary', summary: 'Course not found.' }));
         return;
       }
-      const questions = await createQuizForCourse(course);
+      const weakCards = sessionState.weakCards || [];
+      const questions = await createQuizForCourse(course, weakCards);
       setSessionState((prev) => ({ ...prev, phase: 'quiz', quizQuestions: questions, answers: {}, message: '' }));
     }
     buildQuiz();
@@ -644,6 +654,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
         phase: 'quiz-loading',
         queue: nextQueue,
         completed,
+        weakCards: [...(prev.weakCards || []), ...(rating === 'again' || rating === 'hard' ? [current] : [])],
         message: 'Generating a short quiz from these concepts…',
       }));
       return;
