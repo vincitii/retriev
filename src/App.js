@@ -410,12 +410,14 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
     };
   }
 
-  function sm2Review(card, rating) {
+  function sm2Review(card, rating, examDays = 30) {
     const ease = card.easeFactor || 2.5;
     let interval = card.interval || 1;
     let repetitions = card.repetitions || 0;
     let nextInterval = interval;
     let nextEase = ease;
+
+    const maxInterval = Math.max(1, Math.floor(examDays / 2));
 
     if (rating === 'again') {
       repetitions = 0;
@@ -427,11 +429,11 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
       nextInterval = 1;
     } else if (rating === 'good') {
       repetitions += 1;
-      nextInterval = 2;
+      nextInterval = Math.min(maxInterval, Math.max(2, Math.round(interval * ease)));
     } else if (rating === 'easy') {
       repetitions += 1;
-      nextEase = Math.max(1.3, ease + 0.15);
-      nextInterval = 3;
+      nextEase = Math.min(3.0, ease + 0.15);
+      nextInterval = Math.min(maxInterval, Math.max(3, Math.round(interval * ease * 1.3)));
     }
 
     return {
@@ -441,6 +443,16 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
       repetitions,
       nextReview: nextReviewDate(nextInterval),
     };
+  }
+
+  function getDaysToNearestExam() {
+    const today = new Date();
+    const upcoming = state.exams
+      .filter(e => !e.archived && e.date >= today.toISOString().slice(0, 10))
+      .map(e => countDaysBetween(today, new Date(e.date)))
+      .filter(d => d > 0)
+      .sort((a, b) => a - b);
+    return upcoming[0] || 30;
   }
 
   function getCourseNotesText(course) {
@@ -592,7 +604,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
     if (!current) return;
     const course = state.courses.find((item) => item.id === sessionState.courseId);
     if (course) {
-      const updatedCard = sm2Review(current, rating);
+      const updatedCard = sm2Review(current, rating, getDaysToNearestExam());
       const updatedFlashcards = (course.flashcards || []).map((card) => (card.id === current.id ? updatedCard : card));
       const nextDue = updatedFlashcards.reduce((min, card) => {
         if (!min || card.nextReview < min) return card.nextReview;
@@ -615,7 +627,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
 
     const nextQueue = [...rest];
     if (rating === 'again' || rating === 'hard') {
-      nextQueue.push(sm2Review(current, rating));
+      nextQueue.push(sm2Review(current, rating, getDaysToNearestExam()));
     }
     const completed = sessionState.completed + 1;
 
@@ -944,7 +956,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
 
   function getNextIntervalLabel(card, rating) {
     if (!card) return '';
-    const updated = sm2Review(card, rating);
+    const updated = sm2Review(card, rating, getDaysToNearestExam());
     const days = updated.interval;
     if (rating === 'again') return '< 10 min';
     if (days === 1) return '1 day';
