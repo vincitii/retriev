@@ -214,14 +214,10 @@ button.rating-easy {
   cursor: pointer;
 }
 
-.calendar-session {
-  cursor: pointer;
-}
-
 .calendar-grid{ display:grid; grid-template-columns: repeat(7, 1fr); gap:16px; margin-top:16px; }
 .calendar-day{ background: rgba(255,255,255,0.03); padding:16px; border-radius:12px; min-height:140px; border:1px solid var(--border); }
 .calendar-day h4{ margin:0 0 10px 0; font-size:0.9rem; }
-.calendar-session{ background: rgba(255,255,255,0.05); padding:12px; border-radius:12px; margin-bottom:10px; cursor:pointer; border:1px solid rgba(255,255,255,0.08); }
+.calendar-session{ background: rgba(255,255,255,0.05); padding:12px; border-radius:12px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.08); }
 .calendar-session:hover{ background: rgba(255,255,255,0.1); }
 .philosophy p{ margin:10px 0; color:var(--muted); }
 
