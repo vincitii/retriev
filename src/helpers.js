@@ -141,13 +141,11 @@ export function buildStudySchedule(exams, courses, availability) {
 
   if (!futureExams.length) return [];
 
-  const nextExam = futureExams[0];
-  const daysToExam = countDaysBetween(today, nextExam.date);
+  const nearestExam = futureExams[0];
+  const daysToExam = countDaysBetween(today, nearestExam.date);
   const sessionsPerDay = daysToExam <= 12 ? 2 : 1;
   const schedule = [];
-  let assignmentIndex = 0;
 
-  // default availability if not provided
   const defaultAvailability = availability || { wake: '07:00', sleep: '23:00', blocked: [] };
 
   for (let offset = 0; offset <= daysToExam; offset += 1) {
@@ -155,19 +153,16 @@ export function buildStudySchedule(exams, courses, availability) {
     sessionDate.setDate(sessionDate.getDate() + offset);
     const weekday = sessionDate.toLocaleString(undefined, { weekday: 'long' });
 
-    // build available windows for day
     const wakeMin = parseTimeToMinutes(defaultAvailability.wake || '07:00');
     const sleepMin = parseTimeToMinutes(defaultAvailability.sleep || '23:00');
-    let available = [{ start: wakeMin, end: sleepMin }];
+    const available = [{ start: wakeMin, end: sleepMin }];
 
-    // collect blocked slots applicable to this weekday (or global blocks)
     const blocked = (defaultAvailability.blocked || [])
       .filter((b) => !b.days || b.days.length === 0 || b.days.includes(weekday))
       .map((b) => ({ start: parseTimeToMinutes(b.start), end: parseTimeToMinutes(b.end) }));
 
     const freeSpans = subtractIntervals(available, blocked);
 
-    // create candidate start times inside free spans with a 30-minute gap between sessions
     const candidateStarts = [];
     const sessionLength = 90;
     const sessionGap = 30;
@@ -178,37 +173,27 @@ export function buildStudySchedule(exams, courses, availability) {
       }
     }
 
-    // pick up to sessionsPerDay earliest starts
     const dayStarts = candidateStarts.slice(0, sessionsPerDay);
 
     for (const startMin of dayStarts) {
-      const selected = courses
-        .slice()
-        .sort((a, b) => courseUrgency(b, nextExam.date) - courseUrgency(a, nextExam.date))
-        .slice(assignmentIndex, assignmentIndex + 2);
-
-      const sessionCourses = selected.length
-        ? selected.map((c) => c.title)
-        : ['Review weakest concepts', 'Active recall practice'];
-
-      const summary = buildSessionSummary(sessionCourses, nextExam.date);
       const endMin = startMin + 90;
       const startStr = minutesToTimeString(startMin);
       const endStr = minutesToTimeString(endMin);
+
+      // Each session covers all active exams interleaved — one segment per exam
+      const segments = futureExams.map((exam) => ({ examName: exam.name, examId: exam.id }));
 
       schedule.push({
         id: `session-${offset}-${startStr}`,
         date: compactDate(sessionDate.toISOString()),
         start: startStr,
         end: endStr,
-        courses: sessionCourses,
+        courses: futureExams.map((e) => e.name),
         timeRange: `${formatDateWithDay(sessionDate.toISOString())} ${formatTime12(startStr)} – ${formatTime12(endStr)}`,
-        summary,
-        examName: nextExam.name,
+        summary: `Interleaved study block covering ${futureExams.map((e) => e.name).join(', ')}.`,
+        examName: 'Study Block',
+        segments,
       });
-
-      assignmentIndex += 2;
-      if (assignmentIndex >= courses.length) assignmentIndex = 0;
     }
   }
 

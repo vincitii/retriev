@@ -993,8 +993,11 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
                         style={{ cursor: day.key === todayKey ? 'pointer' : 'default', opacity: day.key === todayKey ? 1 : 0.7 }}
                         onClick={() => { if (day.key === todayKey) startCalendarTimer(session); }}
                       >
-                        <div style={{ fontWeight: 700 }}>{session.examName}</div>
-                        <div style={{ fontSize: '0.9rem' }}>{formatTime12(session.start)} — {formatTime12(session.end)}</div>
+                        <div style={{ fontWeight: 700, fontSize: '0.85rem' }}>Study Block</div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: '2px 0' }}>
+                          {(session.segments || []).map(s => s.examName).join(' · ')}
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>{formatTime12(session.start)} — {formatTime12(session.end)}</div>
                       </div>
                     );
                   }) : <div className="microcopy">No sessions</div>}
