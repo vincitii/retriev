@@ -963,41 +963,6 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
     return `${days} days`;
   }
 
-  async function appendNewNoteCards(courseId) {
-    const course = state.courses.find(c => c.id === courseId);
-    const exam = state.exams.find(e => e.courseId === courseId);
-    if (!course || !exam) return;
-    const existingCards = course.flashcards || [];
-    const notesText = (exam.notes || [])
-      .map(n => `${n.name}\n${n.extractedText ?? n.text ?? ''}`)
-      .join('\n\n');
-    if (!notesText.trim()) return;
-    const desiredCount = getDesiredCardCount(notesText);
-    const humanPrompt = `Notes:\n${notesText}\n\nCreate approximately ${desiredCount} flashcards.`;
-    try {
-      const raw = await claudeComplete(humanPrompt, 1200, SYSTEM_PROMPT);
-      const data = typeof raw === 'string' ? { content: [{ text: raw }] } : raw;
-      let cleanText = data.content[0].text;
-      if (cleanText.includes('```')) cleanText = cleanText.replace(/```json/g, '').replace(/```/g, '');
-      cleanText = cleanText.trim();
-      const lastBracket = cleanText.lastIndexOf(']');
-      if (lastBracket > -1) cleanText = cleanText.substring(0, lastBracket + 1);
-      const flashcards = JSON.parse(cleanText);
-      if (Array.isArray(flashcards) && flashcards.length) {
-        const newCards = flashcards.map((item, index) =>
-          buildCard(item.front || `Card ${index + 1}`, item.back || '')
-        );
-        updateAppState({
-          courses: state.courses.map(c =>
-            c.id === courseId ? { ...c, flashcards: [...existingCards, ...newCards] } : c
-          ),
-        });
-        return newCards;
-      }
-    } catch(e) {
-      console.error(e);
-    }
-  }
 
   function renderSession() {
     const course = state.courses.find((item) => item.id === selectedCourseId);
