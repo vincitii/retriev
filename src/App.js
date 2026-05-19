@@ -89,6 +89,7 @@ function App() {
   const [sessionState, setSessionState] = useState(null);
   const [timerState, setTimerState] = useState({ sessionId: null, remaining: 0, running: false });
   const [recommendation, setRecommendation] = useState('');
+  const [studyTimer, setStudyTimer] = useState({ active: false, remaining: 0, examIndex: 0, examsForSession: [] });
 
   useEffect(() => {
     saveAppState({ ...state, theme });
@@ -170,7 +171,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
     [state.history, todayKey]
   );
 
-  const progressPercent = Math.round((completedToday / Math.max(1, dueCourses.length)) * 100);
+  const progressPercent = Math.round((completedToday / Math.max(1, state.courses.length)) * 100);
 
   const streak = useMemo(() => {
     const days = Array.from(new Set(state.history.map((item) => item.date.slice(0, 10)))).sort((a, b) => (a > b ? -1 : 1));
@@ -677,6 +678,36 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
     });
   }
 
+  function startCalendarTimer(session) {
+    const activeExams = state.exams.filter(e => !e.archived);
+    const count = Math.max(1, activeExams.length);
+    const minutesEach = Math.floor(120 / count);
+    setStudyTimer({
+      active: true,
+      remaining: minutesEach * 60,
+      examIndex: 0,
+      examsForSession: activeExams,
+      minutesEach,
+    });
+  }
+
+  useEffect(() => {
+    if (!studyTimer.active) return;
+    const interval = setInterval(() => {
+      setStudyTimer(prev => {
+        if (prev.remaining <= 1) {
+          const nextIndex = prev.examIndex + 1;
+          if (nextIndex >= prev.examsForSession.length) {
+            return { ...prev, active: false, remaining: 0 };
+          }
+          return { ...prev, examIndex: nextIndex, remaining: prev.minutesEach * 60 };
+        }
+        return { ...prev, remaining: prev.remaining - 1 };
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [studyTimer.active]);
+
   function endSession() {
     setView('home');
     setSessionState(null);
@@ -699,7 +730,6 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
                 <article key={course.id} className="course-card" onClick={() => handleSelectCourse(course.id)} style={{ borderLeft: `4px solid ${course.color || '#2055b1'}` }}>
                   <div>
                     <strong>{course.title}</strong>
-                    <p className="microcopy">Next review: {course.nextDue ? formatDate(course.nextDue) : 'Not scheduled'}</p>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <button type="button" className="primary-outline" onClick={(e) => { e.stopPropagation(); startSession(course.id); }}>Study</button>
@@ -837,6 +867,24 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
           </section>
         </section>
 
+        {studyTimer.active && (
+          <div style={{ background: 'rgba(74,158,255,0.15)', border: '1px solid #4a9eff', borderRadius: 12, padding: '16px 24px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <strong>Study block active</strong>
+              <p className="microcopy" style={{ margin: '4px 0 0 0' }}>
+                Now studying: {studyTimer.examsForSession[studyTimer.examIndex]?.name || 'Unknown'}
+                {studyTimer.examIndex + 1 < studyTimer.examsForSession.length && ` → up next: ${studyTimer.examsForSession[studyTimer.examIndex + 1]?.name}`}
+              </p>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <strong style={{ fontSize: '1.5rem', color: '#4a9eff' }}>
+                {Math.floor(studyTimer.remaining / 60)}:{String(studyTimer.remaining % 60).padStart(2, '0')}
+              </strong>
+              <p className="microcopy" style={{ margin: '4px 0 0 0', cursor: 'pointer' }} onClick={() => setStudyTimer({ active: false, remaining: 0, examIndex: 0, examsForSession: [] })}>Stop</p>
+            </div>
+          </div>
+        )}
+
         <section className="panel">
           <h2>Weekly calendar</h2>
           <p className="microcopy">Exam dates and study sessions appear on the same weekly view.</p>
@@ -855,7 +903,12 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
                   ))}
                   {sessions.length ? sessions.map((session) => {
                     return (
-                      <div key={session.id} className="calendar-session">
+                      <div
+                        key={session.id}
+                        className="calendar-session"
+                        style={{ cursor: day.key === todayKey ? 'pointer' : 'default' }}
+                        onClick={() => { if (day.key === todayKey) startCalendarTimer(session); }}
+                      >
                         <div style={{ fontWeight: 700 }}>{session.examName}</div>
                         <div style={{ fontSize: '0.9rem' }}>{formatTime12(session.start)} — {formatTime12(session.end)}</div>
                       </div>
@@ -1105,7 +1158,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
         <p className="subtitle">One place for courses, exams, flashcards, and spaced repetition.</p>
         <div className="status-bar">
           <div className="progress-wrap">
-            <div className="progress-label">Today: {completedToday}/{dueCourses.length || 0} completed</div>
+            <div className="progress-label">Today: {completedToday}/{state.courses.length || 0} completed</div>
             <div className="progress-bar"><div className="progress-fill" style={{ width: `${progressPercent}%` }} /></div>
           </div>
           <div className="meta-chips">
