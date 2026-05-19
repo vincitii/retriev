@@ -1186,11 +1186,9 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
     <div className={`app-shell theme-${theme}`}>
       <header className="hero">
         <div className="brand-block">
-          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="48" height="48" rx="14" fill="rgba(255,255,255,0.08)"/>
-            <path d="M24 38c-1 0-2-.2-2.8-.6C18.4 36.2 16 33.4 16 30c0-1.2.3-2.4.8-3.4C15.6 25.8 15 24.5 15 23c0-2.6 1.8-4.8 4.2-5.4C19.8 15.6 21.8 14 24 14s4.2 1.6 4.8 3.6C31.2 18.2 33 20.4 33 23c0 1.5-.6 2.8-1.8 3.6.5 1 .8 2.2.8 3.4 0 3.4-2.4 6.2-5.2 7.4-.8.4-1.8.6-2.8.6z" fill="#ff6eb4" fillOpacity="0.3" stroke="#ff6eb4" strokeWidth="1.8" strokeLinejoin="round"/>
-            <path d="M24 20v4M20 24c0 2 1.5 3.5 4 4M28 24c0 2-1.5 3.5-4 4" stroke="#ff6eb4" strokeWidth="1.2" strokeLinecap="round"/>
-            <path d="M26 6l-4 7h3.5l-3 7" stroke="#FFD700" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/>
+          <svg viewBox="0 0 24 24" width="48" height="48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 19c-3.5 0-6-2.5-6-6 0-3 2-5 5-6 1.5-2.5 4.5-3 7-3 4.5 0 8 3.5 8 8 0 2.5-1 4.5-3 6m-9 5c2 1 4 1 6 1" stroke="#ff6eb4" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M13 8l-4 6h5l-1 5 4-7h-4l2-4z" fill="#FFD700" stroke="#FFD700" strokeWidth="1" strokeLinejoin="round"/>
           </svg>
           <span className="brand-name">RETRIEV</span>
         </div>
