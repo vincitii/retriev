@@ -103,7 +103,7 @@ function App() {
   const [sessionState, setSessionState] = useState(null);
   const [timerState, setTimerState] = useState({ sessionId: null, remaining: 0, running: false });
   const [recommendation, setRecommendation] = useState('');
-  const [studyTimer, setStudyTimer] = useState({ active: false, remaining: 0, examIndex: 0, examsForSession: [] });
+  const [studyTimer, setStudyTimer] = useState({ active: false, remaining: 0, segmentIndex: 0, segments: [], segmentMinutes: 0, showSwitch: false });
 
   useEffect(() => {
     saveAppState({ ...state, theme });
@@ -730,15 +730,15 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
   }
 
   function startCalendarTimer(session) {
-    const activeExams = state.exams.filter(e => !e.archived);
-    const count = Math.max(1, activeExams.length);
-    const minutesEach = Math.floor(120 / count);
+    if (!session.segments || !session.segments.length) return;
+    const segmentMinutes = Math.floor(90 / session.segments.length);
     setStudyTimer({
       active: true,
-      remaining: minutesEach * 60,
-      examIndex: 0,
-      examsForSession: activeExams,
-      minutesEach,
+      remaining: segmentMinutes * 60,
+      segmentIndex: 0,
+      segments: session.segments,
+      segmentMinutes,
+      showSwitch: false,
     });
   }
 
@@ -746,18 +746,33 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
     if (!studyTimer.active) return;
     const interval = setInterval(() => {
       setStudyTimer(prev => {
-        if (prev.remaining <= 1) {
-          const nextIndex = prev.examIndex + 1;
-          if (nextIndex >= prev.examsForSession.length) {
-            return { ...prev, active: false, remaining: 0 };
+        if (!prev.active) return prev;
+        const newRemaining = prev.remaining - 1;
+        if (newRemaining <= 0) {
+          const nextIndex = prev.segmentIndex + 1;
+          if (nextIndex >= prev.segments.length) {
+            return { ...prev, active: false, remaining: 0, showSwitch: false };
           }
-          return { ...prev, examIndex: nextIndex, remaining: prev.minutesEach * 60 };
+          return {
+            ...prev,
+            segmentIndex: nextIndex,
+            remaining: prev.segmentMinutes * 60,
+            showSwitch: true,
+          };
         }
-        return { ...prev, remaining: prev.remaining - 1 };
+        return { ...prev, remaining: newRemaining };
       });
     }, 1000);
     return () => clearInterval(interval);
   }, [studyTimer.active]);
+
+  useEffect(() => {
+    if (!studyTimer.active) return;
+    const switchAt = studyTimer.segmentMinutes * 60 - 1;
+    if (studyTimer.remaining === switchAt && studyTimer.segmentIndex + 1 < studyTimer.segments.length) {
+      setStudyTimer(prev => ({ ...prev, showSwitch: true }));
+    }
+  }, [studyTimer.remaining]);
 
   function endSession() {
     setView('home');
@@ -920,19 +935,36 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
         </section>
 
         {studyTimer.active && (
-          <div style={{ background: 'rgba(74,158,255,0.15)', border: '1px solid #4a9eff', borderRadius: 12, padding: '16px 24px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <strong>Study block active</strong>
-              <p className="microcopy" style={{ margin: '4px 0 0 0' }}>
-                Now studying: {studyTimer.examsForSession[studyTimer.examIndex]?.name || 'Unknown'}
-                {studyTimer.examIndex + 1 < studyTimer.examsForSession.length && ` → up next: ${studyTimer.examsForSession[studyTimer.examIndex + 1]?.name}`}
-              </p>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <strong style={{ fontSize: '1.5rem', color: '#4a9eff' }}>
-                {Math.floor(studyTimer.remaining / 60)}:{String(studyTimer.remaining % 60).padStart(2, '0')}
-              </strong>
-              <p className="microcopy" style={{ margin: '4px 0 0 0', cursor: 'pointer' }} onClick={() => setStudyTimer({ active: false, remaining: 0, examIndex: 0, examsForSession: [] })}>Stop</p>
+          <div style={{ position: 'relative', background: 'rgba(74,158,255,0.12)', border: '2px solid #4a9eff', borderRadius: 16, padding: '20px 24px', marginBottom: 20 }}>
+            {studyTimer.showSwitch && (
+              <div style={{ position: 'absolute', top: -50, left: '50%', transform: 'translateX(-50%)', background: '#ff8c42', color: '#000', fontWeight: 700, padding: '10px 24px', borderRadius: 12, whiteSpace: 'nowrap', boxShadow: '0 4px 20px rgba(255,140,66,0.4)', zIndex: 10 }}>
+                ⏱ Time to switch! → {studyTimer.segments[studyTimer.segmentIndex]?.examName}
+                <button type="button" onClick={() => setStudyTimer(prev => ({ ...prev, showSwitch: false }))} style={{ marginLeft: 12, background: 'transparent', border: 'none', color: '#000', fontWeight: 700, cursor: 'pointer', fontSize: '1rem' }}>✕</button>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <strong style={{ fontSize: '1.1rem' }}>Study block active</strong>
+                <div style={{ marginTop: 8, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  {studyTimer.segments.map((seg, i) => (
+                    <span key={i} style={{ padding: '4px 12px', borderRadius: 999, fontSize: '0.85rem', background: i === studyTimer.segmentIndex ? '#4a9eff' : 'rgba(255,255,255,0.08)', color: i === studyTimer.segmentIndex ? '#000' : 'var(--muted)', fontWeight: i === studyTimer.segmentIndex ? 700 : 400 }}>
+                      {seg.examName}
+                    </span>
+                  ))}
+                </div>
+                <p className="microcopy" style={{ margin: '8px 0 0 0' }}>
+                  Currently: <strong>{studyTimer.segments[studyTimer.segmentIndex]?.examName}</strong>
+                  {studyTimer.segmentIndex + 1 < studyTimer.segments.length && (
+                    <span> → up next: {studyTimer.segments[studyTimer.segmentIndex + 1]?.examName}</span>
+                  )}
+                </p>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#4a9eff', fontFamily: 'monospace' }}>
+                  {Math.floor(studyTimer.remaining / 60)}:{String(studyTimer.remaining % 60).padStart(2, '0')}
+                </div>
+                <button type="button" className="secondary" style={{ marginTop: 8 }} onClick={() => setStudyTimer({ active: false, remaining: 0, segmentIndex: 0, segments: [], segmentMinutes: 0, showSwitch: false })}>End session</button>
+              </div>
             </div>
           </div>
         )}
@@ -958,7 +990,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
                       <div
                         key={session.id}
                         className="calendar-session"
-                        style={{ cursor: day.key === todayKey ? 'pointer' : 'default' }}
+                        style={{ cursor: day.key === todayKey ? 'pointer' : 'default', opacity: day.key === todayKey ? 1 : 0.7 }}
                         onClick={() => { if (day.key === todayKey) startCalendarTimer(session); }}
                       >
                         <div style={{ fontWeight: 700 }}>{session.examName}</div>
