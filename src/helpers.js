@@ -200,12 +200,6 @@ export function buildStudySchedule(exams, courses, availability) {
   return schedule;
 }
 
-function courseUrgency(course, examDate) {
-  const dueWeight = course.nextDue ? Math.max(0, 30 - countDaysBetween(new Date(), course.nextDue)) : 0;
-  const performancePenalty = (course.stats.missed || 0) * 3 + (course.stats.guessed || 0) * 2 - (course.stats.easy || 0);
-  const examBonus = Math.max(0, 30 - countDaysBetween(new Date(), examDate));
-  return dueWeight + performancePenalty + examBonus;
-}
 
 export function formatTime12(timeStr) {
   if (!timeStr) return '';
@@ -216,14 +210,6 @@ export function formatTime12(timeStr) {
   return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
-function buildSessionSummary(courses, examDate) {
-  const courseList = courses.join(', ');
-  const examCountdown = countDaysBetween(new Date(), examDate);
-  if (examCountdown <= 7) {
-    return `High urgency review before the exam. Focus on ${courseList} with interleaved recall and active application.`;
-  }
-  return `Build fluency on ${courseList} with focused practice, clinical examples, and retrieval practice.`;
-}
 
 export function computeNextReviewDate(rating, examDates) {
   const today = new Date();
