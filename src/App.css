@@ -31,51 +31,64 @@ body.theme-light::before {
   box-shadow: -6px 0 40px rgba(255,136,66,0.14);
 }
 body.theme-light {
-  --bg: #eef2f7;
-  --panel: #ffffff;
-  --muted: #5c7080;
-  --text: #102a43;
-  --accent: #5c7a99;
-  --accent-2: #4a6b8a;
-  --highlight: #ff8c42;
-  --card: rgba(255,255,255,0.9);
-  --glass: rgba(255,255,255,0.8);
-  color-scheme: light;
+  background: #e2e8f0;
+  color: #1a1a2e;
 }
 
-/* Light mode fixes */
-body.theme-light {
-  background: #f0f2f5;
-  color: #1a1a2e;
+body.theme-light .app-shell {
+  background: #e2e8f0;
+}
+
+body.theme-light .hero {
+  background: linear-gradient(180deg, #1e2d45, #2a3f5f);
+  color: #ffffff;
 }
 
 body.theme-light .panel,
 body.theme-light .flashcard,
 body.theme-light .course-card,
 body.theme-light .content-card,
-body.theme-light .report-card {
+body.theme-light .report-card,
+body.theme-light .report-sub,
+body.theme-light .exam-item,
+body.theme-light .note-card,
+body.theme-light .quiz-card {
   background: #ffffff;
-  border: 1px solid #dde1e7;
+  border: 1px solid #c4cdd8;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
   color: #1a1a2e;
 }
 
-body.theme-light .microcopy {
-  color: #555e6e;
-}
-
-body.theme-light hr {
-  border-top: 1px solid #dde1e7;
-}
-
 body.theme-light .calendar-day {
-  background: #ffffff;
-  border: 1px solid #dde1e7;
+  background: #f8fafc;
+  border: 1px solid #c4cdd8;
 }
 
 body.theme-light .calendar-session {
   background: #dbeafe;
   border: 1px solid #3b82f6;
   color: #1e3a5f;
+}
+
+body.theme-light .calendar-exam {
+  background: #fff3e0;
+  border: 1px solid #ff9800;
+  color: #7c3c00;
+}
+
+body.theme-light .microcopy {
+  color: #4a5568;
+}
+
+body.theme-light .step {
+  background: #f0f4f8;
+  border: 1px solid #c4cdd8;
+}
+
+body.theme-light .card-chip {
+  background: #f0f4f8;
+  border: 1px solid #c4cdd8;
+  color: #1a1a2e;
 }
 
 body.theme-light button.primary-outline {
@@ -86,6 +99,13 @@ body.theme-light button.primary-outline {
 body.theme-light button.primary-outline:hover {
   background: #2055b1;
   color: #ffffff;
+}
+
+body.theme-light input,
+body.theme-light textarea {
+  background: #f8fafc;
+  border: 1px solid #c4cdd8;
+  color: #1a1a2e;
 }
 
 * { box-sizing: border-box; }
