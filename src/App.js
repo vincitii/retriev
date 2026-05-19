@@ -166,7 +166,12 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
     [state.history, todayKey]
   );
 
-  const progressPercent = Math.round((completedToday / Math.max(1, state.courses.length)) * 100);
+  const todaySessionCount = useMemo(() =>
+    state.schedule.filter(s => s.date === todayKey).length || state.courses.length,
+    [state.schedule, todayKey, state.courses.length]
+  );
+
+  const progressPercent = Math.round((completedToday / Math.max(1, todaySessionCount)) * 100);
 
   const streak = useMemo(() => {
     const days = Array.from(new Set(state.history.map((item) => item.date.slice(0, 10)))).sort((a, b) => (a > b ? -1 : 1));
@@ -530,7 +535,8 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
     };
 
     const notesText = getCourseNotesTextForQuiz(course);
-    const prompt = `You are a PA school study coach. Based on this course title and notes, create 4 exam-style quiz questions. Return valid JSON as an array with objects: { question, type, choices, answer, explanation }. Use "multiple-choice" for 2 questions and "short-answer" for 2 questions. Do not include extra text.\n\nCourse title: ${course.title}\nNotes:\n${notesText}`;
+    const quizCount = Math.min(10, Math.max(3, Math.floor((course.flashcards?.length || 15) / 5)));
+    const prompt = `You are a PA school study coach. Based on this course title and notes, create ${quizCount} exam-style quiz questions. Return valid JSON as an array with objects: { question, type, choices, answer, explanation }. Use "multiple-choice" for half the questions and "short-answer" for the other half. Do not include extra text.\n\nCourse title: ${course.title}\nNotes:\n${notesText}`;
     try {
       const raw = await claudeComplete(prompt, 900);
       const parsed = safeParseJson(raw);
@@ -1144,6 +1150,19 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
                 <p>{sessionState.score}%</p>
               </div>
             ) : null}
+            {sessionState.quizQuestions?.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <strong>Review</strong>
+                {sessionState.quizQuestions.map((q, i) => (
+                  <div key={q.id} style={{ marginTop: 12, padding: 16, borderRadius: 12, background: q.isCorrect ? 'rgba(46,204,113,0.1)' : 'rgba(255,107,107,0.1)', border: `1px solid ${q.isCorrect ? 'rgba(46,204,113,0.3)' : 'rgba(255,107,107,0.3)'}` }}>
+                    <p style={{ margin: '0 0 8px 0', fontWeight: 600 }}>{i + 1}. {q.question}</p>
+                    <p className="microcopy" style={{ margin: '0 0 4px 0' }}>Your answer: <span style={{ color: q.isCorrect ? '#2ecc71' : '#ff6b6b' }}>{q.given || '(no answer)'}</span></p>
+                    <p className="microcopy" style={{ margin: '0 0 4px 0' }}>Correct: <span style={{ color: '#2ecc71' }}>{q.answer}</span></p>
+                    {q.explanation && <p className="microcopy" style={{ margin: '4px 0 0 0', fontStyle: 'italic' }}>{q.explanation}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
             <button className="big-button" type="button" onClick={endSession}>Return home</button>
           </div>
         )}
@@ -1167,7 +1186,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
         <p className="subtitle">One place for courses, exams, flashcards, and spaced repetition.</p>
         <div className="status-bar">
           <div className="progress-wrap">
-            <div className="progress-label">Today: {completedToday}/{state.courses.length || 0} completed</div>
+            <div className="progress-label">Today: {completedToday}/{todaySessionCount} completed</div>
             <div className="progress-bar"><div className="progress-fill" style={{ width: `${progressPercent}%` }} /></div>
           </div>
           <div className="meta-chips">
