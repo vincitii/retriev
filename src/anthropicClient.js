@@ -1,4 +1,4 @@
-const PROXY_URL = '/api/chat';
+const PROXY_URL = process.env.NODE_ENV === 'production' ? '/api/chat' : 'http://localhost:3001/api/chat';
 
 export async function claudeComplete(prompt, maxTokens = 800, systemPrompt = null) {
   const body = {

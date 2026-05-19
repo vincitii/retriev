@@ -32,6 +32,49 @@ const ratingButtons = [
   { label: 'Easy', value: 'easy', className: 'rating-easy', interval: '3 days' },
 ];
 
+function ExamNotesRow({ exam, state, loading, onUpload }) {
+  const [open, setOpen] = React.useState(false);
+  const notes = exam.notes || [];
+  const course = state.courses.find((c) => c.id === exam.courseId);
+
+  return (
+    <article className="content-card">
+      <div
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+        onClick={() => setOpen(!open)}
+      >
+        <div>
+          <strong>{exam.name}{course ? ` — ${course.title}` : ''}</strong>
+          <span className="microcopy" style={{ marginLeft: 10 }}>{notes.length} file{notes.length !== 1 ? 's' : ''}</span>
+        </div>
+        <span>{open ? '▲' : '▼'}</span>
+      </div>
+      {open && (
+        <div style={{ marginTop: 12 }}>
+          {notes.map((note) => (
+            <div key={note.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+              <span>{note.name}</span>
+              <span className="microcopy">{formatDate(note.importedAt)}</span>
+            </div>
+          ))}
+          {!notes.length && <p className="microcopy">No notes uploaded for this exam yet.</p>}
+          <label style={{ display: 'block', marginTop: 12 }}>
+            <span className="microcopy">Add notes to this exam</span>
+            <input
+              type="file"
+              accept=".pdf,.txt,.pptx"
+              multiple
+              disabled={loading}
+              onChange={(e) => onUpload(exam.id, Array.from(e.target.files || []))}
+              style={{ display: 'block', marginTop: 6 }}
+            />
+          </label>
+        </div>
+      )}
+    </article>
+  );
+}
+
 function App() {
   const [state, setState] = useState(() => loadAppState() || initialState);
   const [view, setView] = useState('home');
@@ -243,7 +286,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
     const newCourse = {
       id: courseId,
       title,
-      notes: state.uploadDraftNotes || [],
+      notes: [],
       nextDue: todayKey,
       stats: { easy: 0, good: 0, hard: 0, again: 0, totalReviews: 0 },
       createdAt: new Date().toISOString(),
@@ -257,7 +300,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
 
     updateAppState({
       courses: [...state.courses, newCourse],
-      exams: [...state.exams, newExam],
+      exams: [...state.exams, { ...newExam, notes: state.uploadDraftNotes || [] }],
       uploadDraftNotes: [],
     });
     setCourseDraft('');
@@ -266,6 +309,44 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
     setUploadMessage('');
     setStatusMessage('Course saved. It is now in your study queue.');
     setView('home');
+  }
+
+  async function handleExamNotesUpload(examId, files) {
+    if (!files.length) return;
+    setLoading(true);
+    try {
+      const parsedNotes = [];
+      for (const file of files) {
+        let text = '';
+        const lower = file.name.toLowerCase();
+        if (lower.endsWith('.pdf')) {
+          text = await extractTextFromPdf(file);
+        } else if (lower.endsWith('.pptx')) {
+          text = await extractTextFromPptx(file);
+        } else {
+          text = await file.text();
+        }
+        parsedNotes.push({
+          id: `${file.name}-${Date.now()}`,
+          name: file.name,
+          type: file.type || 'text/plain',
+          text,
+          extractedText: text,
+          importedAt: new Date().toISOString(),
+        });
+      }
+      updateAppState({
+        exams: state.exams.map((e) =>
+          e.id === examId
+            ? { ...e, notes: [...(e.notes || []), ...parsedNotes] }
+            : e
+        ),
+      });
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleGenerateSchedule() {
@@ -352,8 +433,10 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
   }
 
   function getCourseNotesText(course) {
-    if (!course.notes?.length) return course.title || '';
-    return course.notes
+    const exam = state.exams.find((e) => e.courseId === course.id);
+    const notes = exam?.notes?.length ? exam.notes : course.notes || [];
+    if (!notes.length) return course.title || '';
+    return notes
       .map((note) => `${note.name}\n${note.extractedText ?? note.text ?? ''}`)
       .join('\n\n');
   }
@@ -413,7 +496,16 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
   }
 
   const createQuizForCourse = useCallback(async (course) => {
-    const notesText = getCourseNotesText(course);
+    const getCourseNotesTextForQuiz = (courseItem) => {
+      const exam = state.exams.find((e) => e.courseId === courseItem.id);
+      const notes = exam?.notes?.length ? exam.notes : courseItem.notes || [];
+      if (!notes.length) return courseItem.title || '';
+      return notes
+        .map((note) => `${note.name}\n${note.extractedText ?? note.text ?? ''}`)
+        .join('\n\n');
+    };
+
+    const notesText = getCourseNotesTextForQuiz(course);
     const prompt = `You are a PA school study coach. Based on this course title and notes, create 4 exam-style quiz questions. Return valid JSON as an array with objects: { question, type, choices, answer, explanation }. Use "multiple-choice" for 2 questions and "short-answer" for 2 questions. Do not include extra text.\n\nCourse title: ${course.title}\nNotes:\n${notesText}`;
     try {
       const raw = await claudeComplete(prompt, 900);
@@ -440,7 +532,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
       answer: '',
       explanation: '',
     }));
-  }, []);
+  }, [state.exams]);
 
   function getDueFlashcards(course) {
     const cards = course.flashcards || [];
@@ -587,7 +679,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
                     <p className="microcopy">Next review: {course.nextDue ? formatDate(course.nextDue) : 'Not scheduled'}</p>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <button type="button" className="secondary" onClick={(e) => { e.stopPropagation(); startSession(course.id); }}>Study</button>
+                    <button type="button" className="primary-outline" onClick={(e) => { e.stopPropagation(); startSession(course.id); }}>Study</button>
                     <button type="button" className="secondary" onClick={(e) => { e.stopPropagation(); handleDeleteCourse(course.id); }} title="Delete course">🗑️</button>
                   </div>
                 </article>
@@ -616,19 +708,19 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
 
         <section className="panel-grid panel-grid-spacious">
           <section className="panel panel-large upload-panel">
-            <h2>Uploaded notes</h2>
-            <p className="microcopy">Files uploaded during course creation are used in the session to extract key concepts.</p>
+            <h2>Exam notes</h2>
+            <p className="microcopy">Click an exam to view or add notes for that exam.</p>
             <div className="content-list">
-              {state.courses.flatMap((course) => course.notes.map((note) => ({ ...note, courseTitle: course.title }))).map((item) => (
-                <article key={item.id} className="content-card">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <strong>{item.name}</strong>
-                    <span className="microcopy">{item.courseTitle}</span>
-                  </div>
-                  <p className="microcopy">Uploaded {formatDate(item.importedAt)}</p>
-                </article>
+              {state.exams.map((exam) => (
+                <ExamNotesRow
+                  key={exam.id}
+                  exam={exam}
+                  state={state}
+                  loading={loading}
+                  onUpload={handleExamNotesUpload}
+                />
               ))}
-              {!state.courses.some((course) => course.notes.length) && <p className="microcopy">No uploaded notes in your course library yet.</p>}
+              {!state.exams.length && <p className="microcopy">No exams yet. Add a course to get started.</p>}
             </div>
           </section>
 
@@ -647,7 +739,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
               ))}
               {!state.exams.length && <p className="microcopy">No exams planned yet.</p>}
             </div>
-            <button type="button" className="secondary" onClick={handleGenerateSchedule} disabled={!state.exams.length || !state.courses.length}>Generate study schedule</button>
+            <button type="button" className="primary-outline" onClick={handleGenerateSchedule} disabled={!state.exams.length || !state.courses.length}>Generate study schedule</button>
           </section>
         </section>
 
@@ -684,7 +776,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
                   <input type="time" id="block-start" />
                   <input type="time" id="block-end" />
                 </div>
-                <button type="button" className="secondary" onClick={() => {
+                <button type="button" className="primary-outline" onClick={() => {
                   const label = document.getElementById('block-label')?.value || 'Busy';
                   const start = document.getElementById('block-start')?.value;
                   const end = document.getElementById('block-end')?.value;
@@ -724,7 +816,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
                   {sessions.length ? sessions.map((session) => {
                     const courseToStart = state.courses.find((course) => course.title === session.courses?.[0])?.id || state.courses[0]?.id;
                     return (
-                      <div key={session.id} className="calendar-session" onClick={() => startSession(courseToStart)}>
+                      <div key={session.id} className="calendar-session">
                         <div style={{ fontWeight: 700 }}>{session.examName}</div>
                         <div style={{ fontSize: '0.9rem' }}>{formatTime12(session.start)} — {formatTime12(session.end)}</div>
                       </div>
@@ -869,13 +961,14 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
               <div className="flashcard-answer" style={{ marginTop: 18 }}>
                 {sessionState.flipped ? (
                   <>
+                    <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.15)', margin: '0 0 16px 0' }} />
                     <div className="microcopy">Back</div>
                     <p>{currentCard.definition}</p>
                   </>
                 ) : null}
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginTop: 24, alignItems: 'center', flexWrap: 'wrap' }}>
-                <button className="secondary" type="button" onClick={handleFlipCard}>{sessionState.flipped ? 'Hide answer' : 'Flip card'}</button>
+                <button className="primary-outline" type="button" onClick={handleFlipCard}>{sessionState.flipped ? 'Hide answer' : 'Flip card'}</button>
                 {sessionState.flipped && (
                   <div className="rating-group">
                     {ratingButtons.map((button) => (
