@@ -137,11 +137,6 @@ STRICT RULES:
 
 Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
 
-  const dueCourses = useMemo(
-    () => (state.courses || []).filter((course) => course.nextDue && course.nextDue <= todayKey),
-    [state.courses, todayKey]
-  );
-
   const coursesDueSorted = useMemo(
     () => (state.courses || []).slice().sort((a, b) => (a.nextDue || '').localeCompare(b.nextDue || '') || a.title.localeCompare(b.title)),
     [state.courses]
