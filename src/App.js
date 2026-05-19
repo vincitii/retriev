@@ -956,11 +956,12 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
 
   function getNextIntervalLabel(card, rating) {
     if (!card) return '';
+    if (rating === 'again') return 'Try again soon';
+    if (rating === 'hard') return 'See again today';
     const updated = sm2Review(card, rating, getDaysToNearestExam());
     const days = updated.interval;
-    if (rating === 'again') return '< 10 min';
-    if (days === 1) return '1 day';
-    return `${days} days`;
+    if (days === 1) return 'Tomorrow';
+    return `In ${days} days`;
   }
 
 
