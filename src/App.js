@@ -1151,7 +1151,12 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
     <div className={`app-shell theme-${theme}`}>
       <header className="hero">
         <div className="brand-block">
-          <span className="brand-icon">🧠</span>
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="48" height="48" rx="14" fill="rgba(255,255,255,0.08)"/>
+            <path d="M16 28c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="#4a9eff" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M14 26c-2 0-4-1.8-4-4s2-4 4-4c.4-3.2 3.2-5.6 6.4-5.6 1.2 0 2.4.4 3.4 1C24.6 12 26 11 28 11c3.4 0 6 2.6 6 6 0 .2 0 .4-.02.6C35.2 18 36 19.4 36 21c0 2.2-1.8 4-4 4" stroke="#4a9eff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M25 20l-3 5h5l-3 5" stroke="#ff8c42" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
           <span className="brand-name">RETRIEV</span>
         </div>
         <p className="hero-greeting">Good morning</p>

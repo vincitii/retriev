@@ -116,7 +116,7 @@ body.theme-light textarea {
 .hero .subtitle { margin: 0; opacity: .9; }
 .hero .brand-block { display: flex; align-items: center; gap: 14px; }
 .hero .brand-icon { display: inline-flex; align-items: center; justify-content: center; width: 58px; height: 58px; border-radius: 18px; background: rgba(255,255,255,0.08); font-size: 1.8rem; }
-.hero .brand-name { font-size: clamp(3rem, 6vw, 4.2rem); font-weight: 800; letter-spacing: -0.06em; text-transform: uppercase; margin: 0; }
+.hero .brand-name { font-size: clamp(3rem, 6vw, 4.2rem); font-weight: 800; letter-spacing: -0.04em; text-transform: uppercase; margin: 0; font-family: 'Space Grotesk', sans-serif; }
 .hero .hero-greeting { margin: 0; font-size: 1.5rem; font-weight: 600; opacity: .95; }
 .hero .eyebrow { text-transform: uppercase; letter-spacing: .12em; opacity: .85; font-size: .8rem; }
 
