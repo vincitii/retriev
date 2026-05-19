@@ -268,8 +268,10 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
   }
 
   function handleArchiveExam(examId) {
+    const exam = state.exams.find(e => e.id === examId);
     updateAppState({
       exams: state.exams.map((e) => e.id === examId ? { ...e, archived: true } : e),
+      schedule: state.schedule.filter(s => !(exam && s.examName === exam.name)),
     });
   }
 
