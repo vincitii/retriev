@@ -26,10 +26,10 @@ const initialState = {
 };
 
 const ratingButtons = [
-  { label: 'Again', value: 'again', className: 'rating-missed' },
-  { label: 'Hard', value: 'hard', className: 'rating-hard' },
-  { label: 'Good', value: 'good', className: 'rating-good' },
-  { label: 'Easy', value: 'easy', className: 'rating-easy' },
+  { label: 'Again', value: 'again', className: 'rating-missed', interval: '<10 min' },
+  { label: 'Hard', value: 'hard', className: 'rating-hard', interval: '1 day' },
+  { label: 'Medium', value: 'good', className: 'rating-good', interval: '2 days' },
+  { label: 'Easy', value: 'easy', className: 'rating-easy', interval: '3 days' },
 ];
 
 function App() {
@@ -81,7 +81,17 @@ function App() {
 
   const todayKey = getTodayKey();
 
-  const SYSTEM_PROMPT = `You are an expert medical educator creating Anki-style flashcards for a PA student. Extract only high-yield testable content. Front must be a specific question or term. Back must be a concise answer of 1-3 sentences. Prioritize anatomical structures, mechanisms, definitions, and clinical facts. Ignore professor info and logistics. Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
+  const SYSTEM_PROMPT = `You are an expert medical educator creating Anki-style flashcards for a PA student. Extract only high-yield testable content that a student would need to know for an exam. 
+
+STRICT RULES:
+- Front must be a clear, specific question about a concept, mechanism, structure, or clinical fact
+- Back must be a concise answer of 1-3 sentences
+- ONLY include anatomical structures, physiological mechanisms, definitions, pathology, and clinical facts
+- DO NOT include figure captions, image descriptions, citations, author names, journal references, movie/video descriptions, or any metadata
+- DO NOT include professor information, course logistics, or administrative content
+- If a line looks like a citation, caption, or reference — skip it entirely
+
+Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
 
   const dueCourses = useMemo(
     () => (state.courses || []).filter((course) => course.nextDue && course.nextDue <= todayKey),
@@ -322,14 +332,14 @@ function App() {
     } else if (rating === 'hard') {
       repetitions += 1;
       nextEase = Math.max(1.3, ease - 0.15);
-      nextInterval = Math.max(1, Math.round(interval * 1.2));
+      nextInterval = 1;
     } else if (rating === 'good') {
       repetitions += 1;
-      nextInterval = Math.max(1, Math.round(interval * 2.5));
+      nextInterval = 2;
     } else if (rating === 'easy') {
       repetitions += 1;
       nextEase = Math.max(1.3, ease + 0.15);
-      nextInterval = Math.max(1, Math.round(interval * 3.5));
+      nextInterval = 3;
     }
 
     return {
@@ -869,7 +879,10 @@ function App() {
                 {sessionState.flipped && (
                   <div className="rating-group">
                     {ratingButtons.map((button) => (
-                      <button key={button.value} type="button" className={button.className} onClick={() => rateFlashcard(button.value)}>{button.label}</button>
+                      <div key={button.value} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                        <button type="button" className={button.className} onClick={() => rateFlashcard(button.value)}>{button.label}</button>
+                        <span className="microcopy" style={{ fontSize: '0.75rem' }}>{button.interval}</span>
+                      </div>
                     ))}
                   </div>
                 )}
