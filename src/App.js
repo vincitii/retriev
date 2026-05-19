@@ -95,6 +95,8 @@ function App() {
   const [examName, setExamName] = useState('Exam 1');
   const [examDate, setExamDate] = useState('');
   const [examObjectives, setExamObjectives] = useState('');
+  const [editingCourseId, setEditingCourseId] = useState(null);
+  const [editingCourseTitle, setEditingCourseTitle] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
   const [uploadMessage, setUploadMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -280,6 +282,15 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
       exams: state.exams.filter((exam) => exam.id !== examId),
       schedule: state.schedule.filter((s) => !(exam && s.examName === exam.name)),
     });
+  }
+
+  function handleSaveCourseTitle(courseId) {
+    const title = editingCourseTitle.trim();
+    if (title) {
+      updateAppState({ courses: state.courses.map(c => c.id === courseId ? { ...c, title } : c) });
+    }
+    setEditingCourseId(null);
+    setEditingCourseTitle('');
   }
 
   function handleUpdateExamObjectives(examId, objectives) {
@@ -793,9 +804,25 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
             </div>
             <div className="course-list">
               {coursesDueSorted.length ? coursesDueSorted.map((course) => (
-                <article key={course.id} className="course-card" onClick={() => handleSelectCourse(course.id)} style={{ borderLeft: `4px solid ${course.color || '#2055b1'}` }}>
+                <article key={course.id} className="course-card" onClick={() => { if (editingCourseId !== course.id) handleSelectCourse(course.id); }} style={{ borderLeft: `4px solid ${course.color || '#2055b1'}` }}>
                   <div>
-                    <strong>{course.title}</strong>
+                    {editingCourseId === course.id ? (
+                      <input
+                        autoFocus
+                        value={editingCourseTitle}
+                        onChange={(e) => setEditingCourseTitle(e.target.value)}
+                        onBlur={() => handleSaveCourseTitle(course.id)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleSaveCourseTitle(course.id); if (e.key === 'Escape') setEditingCourseId(null); }}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ fontWeight: 700, fontSize: '1rem', width: '100%' }}
+                      />
+                    ) : (
+                      <strong
+                        onClick={(e) => { e.stopPropagation(); setEditingCourseId(course.id); setEditingCourseTitle(course.title); }}
+                        style={{ cursor: 'text' }}
+                        title="Click to rename"
+                      >{course.title}</strong>
+                    )}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <button type="button" className="primary-outline" onClick={(e) => { e.stopPropagation(); startSession(course.id); }}>Study</button>

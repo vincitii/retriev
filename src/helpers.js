@@ -141,17 +141,26 @@ export function buildStudySchedule(exams, courses, availability) {
 
   if (!futureExams.length) return [];
 
+  const lastExam = futureExams[futureExams.length - 1];
+  const daysToLastExam = countDaysBetween(today, lastExam.date);
   const nearestExam = futureExams[0];
-  const daysToExam = countDaysBetween(today, nearestExam.date);
-  const sessionsPerDay = daysToExam <= 12 ? 2 : 1;
+  const daysToNearestExam = countDaysBetween(today, nearestExam.date);
+  const sessionsPerDay = daysToNearestExam <= 12 ? 2 : 1;
   const schedule = [];
 
   const defaultAvailability = availability || { wake: '07:00', sleep: '23:00', blocked: [] };
 
-  for (let offset = 0; offset <= daysToExam; offset += 1) {
+  for (let offset = 0; offset <= daysToLastExam; offset += 1) {
     const sessionDate = new Date(today);
     sessionDate.setDate(sessionDate.getDate() + offset);
+    const dateKey = compactDate(sessionDate.toISOString());
     const weekday = sessionDate.toLocaleString(undefined, { weekday: 'long' });
+
+    // Only include exams whose date is on or after this session date
+    const activeExams = futureExams.filter(
+      (exam) => compactDate(exam.date.toISOString()) >= dateKey
+    );
+    if (!activeExams.length) continue;
 
     const wakeMin = parseTimeToMinutes(defaultAvailability.wake || '07:00');
     const sleepMin = parseTimeToMinutes(defaultAvailability.sleep || '23:00');
@@ -179,18 +188,16 @@ export function buildStudySchedule(exams, courses, availability) {
       const endMin = startMin + 90;
       const startStr = minutesToTimeString(startMin);
       const endStr = minutesToTimeString(endMin);
-
-      // Each session covers all active exams interleaved — one segment per exam
-      const segments = futureExams.map((exam) => ({ examName: exam.name, examId: exam.id }));
+      const segments = activeExams.map((exam) => ({ examName: exam.name, examId: exam.id }));
 
       schedule.push({
         id: `session-${offset}-${startStr}`,
-        date: compactDate(sessionDate.toISOString()),
+        date: dateKey,
         start: startStr,
         end: endStr,
-        courses: futureExams.map((e) => e.name),
+        courses: activeExams.map((e) => e.name),
         timeRange: `${formatDateWithDay(sessionDate.toISOString())} ${formatTime12(startStr)} – ${formatTime12(endStr)}`,
-        summary: `Interleaved study block covering ${futureExams.map((e) => e.name).join(', ')}.`,
+        summary: `Interleaved study block covering ${activeExams.map((e) => e.name).join(', ')}.`,
         examName: 'Study Block',
         segments,
       });
