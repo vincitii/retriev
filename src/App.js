@@ -147,11 +147,12 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
   );
 
   useEffect(() => {
-    if (!state.exams.length || !state.courses.length) {
+    if (!state.exams.filter((e) => !e.archived).length || !state.courses.length) {
       setRecommendation('Add an exam and a few courses to get a study recommendation.');
       return;
     }
     const nextExam = state.exams
+      .filter((e) => !e.archived)
       .map((exam) => ({ ...exam, dateObj: new Date(exam.date) }))
       .filter((exam) => exam.dateObj >= new Date())
       .sort((a, b) => a.dateObj - b.dateObj)[0];
@@ -266,6 +267,12 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
     });
   }
 
+  function handleArchiveExam(examId) {
+    updateAppState({
+      exams: state.exams.map((e) => e.id === examId ? { ...e, archived: true } : e),
+    });
+  }
+
   function formatExamLabel(exam) {
     if (!exam) return '';
     if (exam.name?.includes(' - ')) return exam.name;
@@ -296,6 +303,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
       name: examName.trim() || 'Exam 1',
       date: examDate,
       courseId,
+      archived: false,
     };
 
     updateAppState({
@@ -350,11 +358,12 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
   }
 
   function handleGenerateSchedule() {
-    if (!state.exams.length || !state.courses.length) {
+    const activeExams = state.exams.filter((e) => !e.archived);
+    if (!activeExams.length || !state.courses.length) {
       setStatusMessage('Add both exams and courses before generating a schedule.');
       return;
     }
-    const schedule = buildStudySchedule(state.exams, state.courses, state.availability || initialState.availability);
+    const schedule = buildStudySchedule(activeExams, state.courses, state.availability || initialState.availability);
     updateAppState({ schedule });
     setStatusMessage('Study schedule created based on your upcoming exams.');
   }
@@ -727,18 +736,35 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
           <section className="panel panel-small">
             <h2>Exam plans</h2>
             <div className="chip-list">
-              {state.exams.map((exam) => (
+              {state.exams.filter(e => !e.archived).map((exam) => (
                 <div key={exam.id} className="exam-item">
                   <div>
                     <strong>{formatExamLabel(exam)}</strong>
                     <div className="microcopy">{formatDate(exam.date)}</div>
                     <div className="microcopy">{exam.topics}</div>
                   </div>
-                  <button type="button" className="secondary" onClick={() => handleDeleteExam(exam.id)} title="Delete exam">🗑️</button>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button type="button" className="primary-outline" onClick={() => handleArchiveExam(exam.id)} title="Archive exam">Archive</button>
+                    <button type="button" className="secondary" onClick={() => handleDeleteExam(exam.id)} title="Delete exam">🗑️</button>
+                  </div>
                 </div>
               ))}
-              {!state.exams.length && <p className="microcopy">No exams planned yet.</p>}
+              {!state.exams.filter(e => !e.archived).length && <p className="microcopy">No exams planned yet.</p>}
             </div>
+            {state.exams.some(e => e.archived) && (
+              <div style={{ marginTop: 16 }}>
+                <strong className="microcopy">Archived</strong>
+                {state.exams.filter(e => e.archived).map(exam => (
+                  <div key={exam.id} className="exam-item" style={{ opacity: 0.5, marginTop: 8 }}>
+                    <div>
+                      <strong>{formatExamLabel(exam)}</strong>
+                      <div className="microcopy">{formatDate(exam.date)}</div>
+                    </div>
+                    <button type="button" className="secondary" onClick={() => handleDeleteExam(exam.id)} title="Delete exam">🗑️</button>
+                  </div>
+                ))}
+              </div>
+            )}
             <button type="button" className="primary-outline" onClick={handleGenerateSchedule} disabled={!state.exams.length || !state.courses.length}>Generate study schedule</button>
           </section>
         </section>
@@ -803,7 +829,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
           <div className="calendar-grid">
             {weekDates.map((day) => {
               const sessions = state.schedule.filter((session) => session.date === day.key);
-              const exams = state.exams.filter((exam) => exam.date === day.key);
+              const exams = state.exams.filter((exam) => !exam.archived && exam.date === day.key);
               return (
                 <div key={day.key} className="calendar-day">
                   <h4>{formatDateWithDay(day.date.toISOString())}</h4>
