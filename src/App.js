@@ -32,7 +32,7 @@ const ratingButtons = [
   { label: 'Easy', value: 'easy', className: 'rating-easy' },
 ];
 
-function ExamNotesRow({ exam, state, loading, onUpload }) {
+function ExamNotesRow({ exam, state, loading, onUpload, onUpdateObjectives }) {
   const [open, setOpen] = React.useState(false);
   const notes = exam.notes || [];
   const course = state.courses.find((c) => c.id === exam.courseId);
@@ -58,6 +58,19 @@ function ExamNotesRow({ exam, state, loading, onUpload }) {
             </div>
           ))}
           {!notes.length && <p className="microcopy">No notes uploaded for this exam yet.</p>}
+          <div style={{ marginTop: 12 }}>
+            <label style={{ display: 'block' }}>
+              <span className="microcopy" style={{ fontWeight: 600 }}>Learning objectives</span>
+              <p className="microcopy" style={{ margin: '2px 0 6px 0', fontSize: '0.8rem' }}>Paste your professor's learning objectives here. Flashcards will be generated to cover each one.</p>
+              <textarea
+                rows={5}
+                value={exam.objectives || ''}
+                onChange={(e) => onUpdateObjectives(exam.id, e.target.value)}
+                placeholder={"Example:\n- Describe the two major divisions of the nervous system\n- Identify the major glial cell types and their functions\n- Explain the role of myelin in saltatory conduction"}
+                style={{ width: '100%', marginTop: 4, fontSize: '0.9rem' }}
+              />
+            </label>
+          </div>
           <label style={{ display: 'block', marginTop: 12 }}>
             <span className="microcopy">Add notes to this exam</span>
             <input
@@ -268,6 +281,12 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
     });
   }
 
+  function handleUpdateExamObjectives(examId, objectives) {
+    updateAppState({
+      exams: state.exams.map(e => e.id === examId ? { ...e, objectives } : e),
+    });
+  }
+
   function handleArchiveExam(examId) {
     const exam = state.exams.find(e => e.id === examId);
     updateAppState({
@@ -306,12 +325,14 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
       name: examName.trim() || 'Exam 1',
       date: examDate,
       courseId,
+      notes: state.uploadDraftNotes || [],
       archived: false,
+      objectives: '',
     };
 
     updateAppState({
       courses: [...state.courses, newCourse],
-      exams: [...state.exams, { ...newExam, notes: state.uploadDraftNotes || [] }],
+      exams: [...state.exams, newExam],
       uploadDraftNotes: [],
     });
     setCourseDraft('');
@@ -464,10 +485,10 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
   function getCourseNotesText(course) {
     const exam = state.exams.find((e) => e.courseId === course.id);
     const notes = exam?.notes?.length ? exam.notes : course.notes || [];
-    if (!notes.length) return course.title || '';
-    return notes
-      .map((note) => `${note.name}\n${note.extractedText ?? note.text ?? ''}`)
-      .join('\n\n');
+    const notesText = notes.length
+      ? notes.map((note) => `${note.name}\n${note.extractedText ?? note.text ?? ''}`).join('\n\n')
+      : course.title || '';
+    return notesText;
   }
 
   async function prepareCourseFlashcards(course) {
@@ -477,7 +498,12 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
     }
 
     const desiredCount = getDesiredCardCount(notesText);
-    const humanPrompt = `Notes:\n${notesText}\n\nCreate approximately ${desiredCount} flashcards.`;
+    const exam = state.exams.find(e => e.courseId === course.id);
+    const objectivesText = exam?.objectives?.trim();
+    const objectivesSection = objectivesText
+      ? `\n\nLEARNING OBJECTIVES — you MUST generate at least one flashcard directly addressing each objective below:\n${objectivesText}`
+      : '';
+    const humanPrompt = `Notes:\n${notesText}${objectivesSection}\n\nCreate approximately ${desiredCount} flashcards. If learning objectives are provided, ensure every objective is covered by at least one card.`;
 
     console.log('Sending extracted text to Claude:', notesText.slice(0, 500));
 
@@ -545,7 +571,13 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
       ? `Focus specifically on these concepts the student struggled with:`
       : `Based on this course title and notes, create exam-style questions:`;
 
-    const prompt = `You are a PA school study coach. ${focusNote}\n\n${weakCardText}\n\nCreate ${quizCount} exam-style quiz questions. Return valid JSON as an array with objects: { question, type, choices, answer, explanation }. Use "multiple-choice" for half the questions and "short-answer" for the other half. Do not include extra text.`;
+    const exam = state.exams.find(e => e.courseId === course.id);
+    const objectivesText = exam?.objectives?.trim();
+    const objectivesSection = objectivesText
+      ? `\n\nLearning objectives to prioritize:\n${objectivesText}`
+      : '';
+
+    const prompt = `You are a PA school study coach. ${focusNote}\n\n${weakCardText}${objectivesSection}\n\nCreate ${quizCount} exam-style quiz questions. Return valid JSON as an array with objects: { question, type, choices, answer, explanation }. Use "multiple-choice" for half the questions and "short-answer" for the other half. Do not include extra text.`;
     try {
       const raw = await claudeComplete(prompt, 900);
       const parsed = safeParseJson(raw);
@@ -788,6 +820,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
                   state={state}
                   loading={loading}
                   onUpload={handleExamNotesUpload}
+                  onUpdateObjectives={handleUpdateExamObjectives}
                 />
               ))}
               {!state.exams.length && <p className="microcopy">No exams yet. Add a course to get started.</p>}
