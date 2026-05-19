@@ -26,10 +26,10 @@ const initialState = {
 };
 
 const ratingButtons = [
-  { label: 'Again', value: 'again', className: 'rating-missed', interval: '<10 min' },
-  { label: 'Hard', value: 'hard', className: 'rating-hard', interval: '1 day' },
-  { label: 'Medium', value: 'good', className: 'rating-good', interval: '2 days' },
-  { label: 'Easy', value: 'easy', className: 'rating-easy', interval: '3 days' },
+  { label: 'Again', value: 'again', className: 'rating-missed' },
+  { label: 'Hard', value: 'hard', className: 'rating-hard' },
+  { label: 'Medium', value: 'good', className: 'rating-good' },
+  { label: 'Easy', value: 'easy', className: 'rating-easy' },
 ];
 
 function ExamNotesRow({ exam, state, loading, onUpload }) {
@@ -942,6 +942,15 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
     );
   }
 
+  function getNextIntervalLabel(card, rating) {
+    if (!card) return '';
+    const updated = sm2Review(card, rating);
+    const days = updated.interval;
+    if (rating === 'again') return '< 10 min';
+    if (days === 1) return '1 day';
+    return `${days} days`;
+  }
+
   async function appendNewNoteCards(courseId) {
     const course = state.courses.find(c => c.id === courseId);
     const exam = state.exams.find(e => e.courseId === courseId);
@@ -1037,7 +1046,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
                     {ratingButtons.map((button) => (
                       <div key={button.value} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                         <button type="button" className={button.className} onClick={() => rateFlashcard(button.value)}>{button.label}</button>
-                        <span className="microcopy" style={{ fontSize: '0.75rem' }}>{button.interval}</span>
+                        <span className="microcopy" style={{ fontSize: '0.75rem' }}>{getNextIntervalLabel(currentCard, button.value)}</span>
                       </div>
                     ))}
                   </div>
@@ -1063,13 +1072,14 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
                 {question.type === 'multiple-choice' ? (
                   <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
                     {question.choices.map((choice) => (
-                      <label key={choice} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <label key={choice} style={{ display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer', padding: '8px 12px', borderRadius: 8, background: sessionState.answers[question.id] === choice ? 'rgba(74,158,255,0.15)' : 'transparent', border: '1px solid rgba(255,255,255,0.08)', marginBottom: 6 }}>
                         <input
                           type="radio"
                           name={question.id}
                           value={choice}
                           checked={sessionState.answers[question.id] === choice}
                           onChange={(e) => updateQuizAnswer(question.id, e.target.value)}
+                          style={{ accentColor: '#4a9eff', width: 18, height: 18, flexShrink: 0 }}
                         />
                         <span>{choice}</span>
                       </label>
