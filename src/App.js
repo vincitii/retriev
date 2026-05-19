@@ -1011,6 +1011,10 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
     if (!card) return '';
     if (rating === 'again') return 'Try again soon';
     if (rating === 'hard') return 'See again today';
+    if (!card.repetitions || card.repetitions === 0) {
+      if (rating === 'good') return 'Tomorrow';
+      if (rating === 'easy') return 'In 2 days';
+    }
     const updated = sm2Review(card, rating, getDaysToNearestExam());
     const days = updated.interval;
     if (days === 1) return 'Tomorrow';
