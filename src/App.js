@@ -1062,6 +1062,10 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
               </div>
             ) : null}
             <button className="big-button" type="button" onClick={endSession}>Return home</button>
+            <button className="primary-outline" type="button" onClick={async () => {
+              await appendNewNoteCards(sessionState.courseId);
+              startSession(sessionState.courseId);
+            }}>Add new notes & restart</button>
           </div>
         )}
       </section>
