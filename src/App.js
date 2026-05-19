@@ -814,7 +814,6 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
                     </div>
                   ))}
                   {sessions.length ? sessions.map((session) => {
-                    const courseToStart = state.courses.find((course) => course.title === session.courses?.[0])?.id || state.courses[0]?.id;
                     return (
                       <div key={session.id} className="calendar-session">
                         <div style={{ fontWeight: 700 }}>{session.examName}</div>
