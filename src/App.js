@@ -420,6 +420,11 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
 
     const maxInterval = Math.max(1, Math.floor(examDays / 2));
 
+    if (card.repetitions === 0) {
+      if (rating === 'good') return { ...card, interval: 1, easeFactor: ease, repetitions: 1, nextReview: nextReviewDate(1) };
+      if (rating === 'easy') return { ...card, interval: 2, easeFactor: Math.min(3.0, ease + 0.15), repetitions: 1, nextReview: nextReviewDate(2) };
+    }
+
     if (rating === 'again') {
       repetitions = 0;
       nextInterval = 1;
@@ -430,11 +435,11 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
       nextInterval = 1;
     } else if (rating === 'good') {
       repetitions += 1;
-      nextInterval = Math.min(maxInterval, Math.max(2, Math.round(interval * ease)));
+      nextInterval = Math.min(maxInterval, Math.max(1, Math.round(interval * ease)));
     } else if (rating === 'easy') {
       repetitions += 1;
       nextEase = Math.min(3.0, ease + 0.15);
-      nextInterval = Math.min(maxInterval, Math.max(3, Math.round(interval * ease * 1.3)));
+      nextInterval = Math.min(maxInterval, Math.max(2, Math.round(interval * ease * 1.3)));
     }
 
     return {
