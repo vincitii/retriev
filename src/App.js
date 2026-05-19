@@ -986,13 +986,14 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
             <ol>
               <li><strong>Set your availability</strong> — before anything else, set your wake time, sleep time, and blocked slots (classes, meals, commute) in the My Schedule section. This ensures your study blocks only land in times you can actually study.</li>
               <li><strong>Add a course</strong> — give it a name, upload your lecture PDFs or slides, and set your exam date.</li>
+              <li><strong>Add learning objectives</strong> — open the Exam notes section and click your exam to expand it. Paste your professor's learning objectives into the text box. Claude will guarantee at least one flashcard per objective and will prioritize them in your end-of-session quiz.</li>
               <li><strong>Generate your schedule</strong> — click "Generate study schedule" in Exam plans to build a daily block split across all your active exams.</li>
               <li><strong>Start a study session</strong> — click Study on any course card. Flashcards are generated automatically from your notes using Claude AI.</li>
               <li><strong>Rate honestly</strong> — Again means you didn't know it, Hard means you struggled, Medium means you got it with effort, Easy means instant recall. Cards you rate Again or Hard will appear in your end-of-session quiz so you can reinforce the weak spots immediately.</li>
               <li><strong>Finish the quiz</strong> — after flashcards you get an AI-generated quiz focused on the cards you struggled with. Review your answers and explanations before returning home.</li>
               <li><strong>Use the calendar timer</strong> — click today's study block on the weekly calendar to start a timed session. The timer splits your block across all active exams and tells you when to switch.</li>
               <li><strong>Archive exams when done</strong> — once an exam passes, archive it in Exam plans so it clears from your queue and calendar.</li>
-              <li><strong>Add notes anytime</strong> — click any exam in Exam notes to upload additional PDFs. New notes are included next time you generate flashcards.</li>
+              <li><strong>Add notes or objectives anytime</strong> — click any exam in Exam notes to upload additional PDFs or update your learning objectives. Both are picked up the next time you generate flashcards.</li>
             </ol>
 
             <h3>Weak spot tracker</h3>
