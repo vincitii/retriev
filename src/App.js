@@ -94,6 +94,7 @@ function App() {
   const [courseDraft, setCourseDraft] = useState('');
   const [examName, setExamName] = useState('Exam 1');
   const [examDate, setExamDate] = useState('');
+  const [examObjectives, setExamObjectives] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
   const [uploadMessage, setUploadMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -327,7 +328,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
       courseId,
       notes: state.uploadDraftNotes || [],
       archived: false,
-      objectives: '',
+      objectives: examObjectives.trim(),
     };
 
     updateAppState({
@@ -338,6 +339,7 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
     setCourseDraft('');
     setExamName('Exam 1');
     setExamDate('');
+    setExamObjectives('');
     setUploadMessage('');
     setStatusMessage('Course saved. It is now in your study queue.');
     setView('home');
@@ -1057,6 +1059,17 @@ Return ONLY a valid JSON array: [{"front": "question", "back": "answer"}]`;
             <label>
               Exam date
               <input type="date" value={examDate} onChange={(e) => setExamDate(e.target.value)} />
+            </label>
+            <label>
+              Learning objectives
+              <p className="microcopy" style={{ margin: '2px 0 6px 0', fontSize: '0.85rem' }}>Paste your professor's learning objectives. Flashcards will be generated to cover each one.</p>
+              <textarea
+                rows={5}
+                value={examObjectives}
+                onChange={(e) => setExamObjectives(e.target.value)}
+                placeholder={"Example:\n- Describe the two major divisions of the nervous system\n- Identify the major glial cell types and their functions\n- Explain the role of myelin in saltatory conduction"}
+                style={{ width: '100%', marginTop: 4 }}
+              />
             </label>
             
           </div>
